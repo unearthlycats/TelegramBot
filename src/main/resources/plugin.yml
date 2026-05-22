@@ -1,0 +1,8 @@
+name: TelegramBot
+version: '${version}'
+
+main: net.unearthly.telegramBot.TelegramBotManager
+api-version: '1.21.11'
+load: POSTWORLD
+
+authors: [ t.me/UnearthlyCatS ]
