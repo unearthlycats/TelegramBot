@@ -40,8 +40,6 @@ class TelegramBotManager : JavaPlugin() {
                 }
             }
         }
-
-        RegisteredPlayersManager()
     }
 
     override fun onDisable() {
