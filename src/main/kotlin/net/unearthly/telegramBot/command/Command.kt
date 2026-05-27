@@ -21,7 +21,7 @@ object CommandManager {
 }
 
 fun onCommand(message: Message): Boolean {
-    val text = message.text ?: return false
+    val text = (message.text ?: return false).lowercase()
     if (!text.startsWith("/")) return false // Telegram commands usually start with '/'
 
     val parts = text.split("\\s+".toRegex())
@@ -42,3 +42,7 @@ fun onCommand(message: Message): Boolean {
 
     return true
 }
+
+@Target(AnnotationTarget.CLASS)
+@Retention(AnnotationRetention.RUNTIME)
+annotation class TelegramCommand(val name: String)

@@ -9,6 +9,7 @@ import net.unearthly.telegramBot.command.Command
 import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.plugin.java.JavaPlugin
 import java.io.File
+import net.unearthly.telegramBot.command.onCommand
 
 class TelegramBotManager : JavaPlugin() {
 
@@ -35,7 +36,7 @@ class TelegramBotManager : JavaPlugin() {
                     val message = this.message.text ?: return@message
 
                     if (message.first().equals('/', true)) {
-
+                        onCommand(this.message)
                     }
                 }
             }
