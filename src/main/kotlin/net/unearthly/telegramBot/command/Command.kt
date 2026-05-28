@@ -4,12 +4,10 @@ import com.github.kotlintelegrambot.entities.Message
 import java.util.UUID
 
 //basically class for other command
-interface Command {
+abstract class Command(val command: String) {
     // if user doesn't link account
-    fun execute(message: Message)
-    fun execute(message: Message, args: List<String>)
-    fun execute(uuid: UUID, message: Message)
-    fun execute(uuid: UUID, message: Message, args: List<String>)
+    abstract fun execute(message: Message)
+    abstract fun execute(message: Message, args: List<String>)
 }
 
 object CommandManager {
@@ -42,7 +40,3 @@ fun onCommand(message: Message): Boolean {
 
     return true
 }
-
-@Target(AnnotationTarget.CLASS)
-@Retention(AnnotationRetention.RUNTIME)
-annotation class TelegramCommand(val name: String)
