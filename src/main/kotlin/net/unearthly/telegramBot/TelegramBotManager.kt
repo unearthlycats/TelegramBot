@@ -4,7 +4,9 @@ import com.github.kotlintelegrambot.Bot
 import com.github.kotlintelegrambot.bot
 import com.github.kotlintelegrambot.dispatch
 import com.github.kotlintelegrambot.dispatcher.command
+import com.github.kotlintelegrambot.dispatcher.handlers.HandleCommand
 import com.github.kotlintelegrambot.dispatcher.message
+import com.github.kotlintelegrambot.entities.ChatId
 import net.unearthly.telegramBot.command.Command
 import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.plugin.java.JavaPlugin
@@ -23,6 +25,7 @@ class TelegramBotManager : JavaPlugin() {
 
     override fun onEnable() {
         instance = this
+        this.saveDefaultConfig()
 
         bot = bot {
             try {
@@ -37,6 +40,14 @@ class TelegramBotManager : JavaPlugin() {
 
                     if (message.first().equals('/', true)) {
                         onCommand(this.message)
+                    }
+                }
+
+                command("support") {
+                    val text = this.message.text ?: return@command
+
+                    if (config.getStringList("support_users").contains(this.message.chat.username)) {
+                        //TODO support team manage
                     }
                 }
             }

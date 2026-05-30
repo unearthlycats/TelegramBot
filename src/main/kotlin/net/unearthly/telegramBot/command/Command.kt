@@ -20,8 +20,8 @@ object CommandManager {
 
 fun onCommand(message: Message): Boolean {
     val text = (message.text ?: return false).lowercase()
-    if (!text.startsWith("/")) return false // Telegram commands usually start with '/'
-
+    if (!text.startsWith("/")) return false
+    // IDK what I need to write in ragex, and I ask in AI
     val parts = text.split("\\s+".toRegex())
     val commandName = parts[0].lowercase()
     val args = parts.drop(1)
