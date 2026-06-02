@@ -3,17 +3,26 @@ package net.unearthly.telegramBot
 import com.github.kotlintelegrambot.Bot
 import com.github.kotlintelegrambot.bot
 import com.github.kotlintelegrambot.dispatch
+import com.github.kotlintelegrambot.dispatcher.callbackQuery
 import com.github.kotlintelegrambot.dispatcher.command
 import com.github.kotlintelegrambot.dispatcher.handlers.HandleCommand
 import com.github.kotlintelegrambot.dispatcher.message
+import com.github.kotlintelegrambot.entities.Chat
 import com.github.kotlintelegrambot.entities.ChatId
+import com.github.kotlintelegrambot.entities.InlineKeyboardMarkup
+import com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton
 import net.unearthly.telegramBot.command.Command
 import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.plugin.java.JavaPlugin
 import java.io.File
 import net.unearthly.telegramBot.command.onCommand
+import kotlin.uuid.Uuid
 
 class TelegramBotManager : JavaPlugin() {
+
+    private val users = YamlConfiguration.loadConfiguration(File(dataFolder.path, "users.yml"))
+    private val chatsWithSupport = mutableMapOf<ChatId.Id, Support>()
+
 
     companion object {
         lateinit var instance: TelegramBotManager
@@ -35,23 +44,65 @@ class TelegramBotManager : JavaPlugin() {
             }
 
             dispatch {
+                command("start") {
+
+                }
+
                 message {
                     val message = this.message.text ?: return@message
+                    val chatId = ChatId.fromId(this.message.chat.id)
 
                     if (message.first().equals('/', true)) {
                         onCommand(this.message)
+                    }
+
+                    if (chatsWithSupport.containsKey(chatId)) {
+                        val user = chatsWithSupport[chatId] ?: return@message
+
+                        if (user.whoResponse != null) {
+                            bot.sendMessage(user.whoResponse, message)
+                        }
+
+                        user.messages.add(message)
                     }
                 }
 
                 command("support") {
                     val text = this.message.text ?: return@command
+                    val chatId = ChatId.fromId(this.message.chat.id)
 
                     if (config.getStringList("support_users").contains(this.message.chat.username)) {
-                        //TODO support team manage
+                        chatsWithSupport[chatId] = Support(Uuid.random())
+                        this.bot.sendMessage(chatId, "You started chat with support team, all your messages will be automatically send to the moderator!")
                     }
+
+                    var buttons: InlineKeyboardMarkup? = null
+
+                    var addedButtons = 0
+                    chatsWithSupport.forEach { (chatId, support) ->
+                        if (addedButtons >= 7) return@forEach
+
+                        val whoStarted = this.bot.getChat(chatId).get()
+                        buttons = InlineKeyboardMarkup.create(listOf(listOf(InlineKeyboardButton.CallbackData(
+                            "${whoStarted.firstName} | (${support.messages.size})",
+                            "starting_chat"
+                        ))))
+
+                        addedButtons++
+                    }
+
+                    this.bot.sendMessage(chatId, "Select the user who you want to response:", replyMarkup = buttons)
+                }
+
+                callbackQuery("starting_chat") {
+                    val chatId = ChatId.fromId(this.callbackQuery.message?.chat?.id ?: return@callbackQuery)
+
+//                    bot.sendMessage(chatId, )
                 }
             }
         }
+
+        bot.startPolling()
     }
 
     override fun onDisable() {
