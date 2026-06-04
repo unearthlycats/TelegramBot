@@ -11,6 +11,7 @@ import com.github.kotlintelegrambot.entities.Chat
 import com.github.kotlintelegrambot.entities.ChatId
 import com.github.kotlintelegrambot.entities.InlineKeyboardMarkup
 import com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton
+import jdk.internal.org.jline.utils.InfoCmp
 import net.unearthly.telegramBot.command.Command
 import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.plugin.java.JavaPlugin
@@ -83,10 +84,18 @@ class TelegramBotManager : JavaPlugin() {
                         if (addedButtons >= 7) return@forEach
 
                         val whoStarted = this.bot.getChat(chatId).get()
-                        buttons = InlineKeyboardMarkup.create(listOf(listOf(InlineKeyboardButton.CallbackData(
+                        buttons = InlineKeyboardMarkup.create(
+
+                        listOf(InlineKeyboardButton.CallbackData(
                             "${whoStarted.firstName} | (${support.messages.size})",
                             "starting_chat"
-                        ))))
+                        )),
+
+//                        listOf(InlineKeyboardButton.CallbackData(
+//                            "Back"
+//
+//                        ))
+                        )
 
                         addedButtons++
                     }
@@ -95,9 +104,17 @@ class TelegramBotManager : JavaPlugin() {
                 }
 
                 callbackQuery("starting_chat") {
-                    val chatId = ChatId.fromId(this.callbackQuery.message?.chat?.id ?: return@callbackQuery)
+                    val supportChatId = ChatId.fromId(this.callbackQuery.message?.chat?.id ?: return@callbackQuery)
+                    val user = chatsWithSupport.entries.find { it.value.whoResponse == supportChatId } ?: return@callbackQuery
 
-//                    bot.sendMessage(chatId, )
+                    val messages = user.value.messages
+                    val chatId = user.value.whoResponse ?: return@callbackQuery
+
+                    if (!messages.isEmpty()) {
+                        messages.forEach { this.bot.sendMessage(supportChatId, it) }
+                    }
+
+                    this.bot.sendMessage(chatId, this.callbackQuery.message?.text ?: return@callbackQuery)
                 }
             }
         }
