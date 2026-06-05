@@ -1,127 +1,127 @@
 package net.unearthly.telegramBot
 
+import com.charleskorn.kaml.Yaml
 import com.github.kotlintelegrambot.Bot
 import com.github.kotlintelegrambot.bot
 import com.github.kotlintelegrambot.dispatch
 import com.github.kotlintelegrambot.dispatcher.callbackQuery
 import com.github.kotlintelegrambot.dispatcher.command
-import com.github.kotlintelegrambot.dispatcher.handlers.HandleCommand
 import com.github.kotlintelegrambot.dispatcher.message
-import com.github.kotlintelegrambot.entities.Chat
 import com.github.kotlintelegrambot.entities.ChatId
 import com.github.kotlintelegrambot.entities.InlineKeyboardMarkup
 import com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton
-import jdk.internal.org.jline.utils.InfoCmp
-import net.unearthly.telegramBot.command.Command
-import org.bukkit.configuration.file.YamlConfiguration
-import org.bukkit.plugin.java.JavaPlugin
 import java.io.File
 import net.unearthly.telegramBot.command.onCommand
+import kotlin.collections.component1
+import kotlin.collections.component2
 import kotlin.uuid.Uuid
+import kotlinx.serialization.decodeFromString
 
-class TelegramBotManager : JavaPlugin() {
+//IDK is there comfortable to place the variable
+private val chatsWithSupport = mutableMapOf<ChatId.Id, Support>()
 
-    private val users = YamlConfiguration.loadConfiguration(File(dataFolder.path, "users.yml"))
-    private val chatsWithSupport = mutableMapOf<ChatId.Id, Support>()
+lateinit var bot: Bot
+    private set
 
+lateinit var config: BotConfig
+    private set
 
-    companion object {
-        lateinit var instance: TelegramBotManager
-        private set
+fun main() {
+    //here we initialization the config
+    val file = File("config.yml")
 
-        lateinit var bot: Bot
-            private set
+    if (!file.exists()) {
+        file.createNewFile()
     }
 
-    override fun onEnable() {
-        instance = this
-        this.saveDefaultConfig()
+    config = Yaml.default.decodeFromString<BotConfig>(file.readText())
 
-        bot = bot {
-            try {
-                token = config.getString("token")!!
-            } catch(e: NullPointerException) {
-                e
+    bot = bot {
+        token = config.token
+
+        dispatch {
+            command("start") {
+
             }
 
-            dispatch {
-                command("start") {
+            message {
+                val message = this.message.text ?: return@message
+                val chatId = ChatId.fromId(this.message.chat.id)
 
+                if (message.startsWith('/')) {
+                    onCommand(this.message)
                 }
 
-                message {
-                    val message = this.message.text ?: return@message
-                    val chatId = ChatId.fromId(this.message.chat.id)
+                if (chatsWithSupport.containsKey(chatId)) {
+                    val user = chatsWithSupport[chatId] ?: return@message
 
-                    if (message.first().equals('/', true)) {
-                        onCommand(this.message)
+                    if (user.whoResponse != null) {
+                        bot.sendMessage(user.whoResponse, message)
                     }
 
-                    if (chatsWithSupport.containsKey(chatId)) {
-                        val user = chatsWithSupport[chatId] ?: return@message
+                    user.messages.add(message)
+                }
+            }
 
-                        if (user.whoResponse != null) {
-                            bot.sendMessage(user.whoResponse, message)
-                        }
+            command("support") {
+                val text = this.message.text ?: return@command
+                val chatId = ChatId.fromId(this.message.chat.id)
 
-                        user.messages.add(message)
-                    }
+                if (config.moderators.contains(this.message.chat.username)) {
+                    chatsWithSupport[chatId] = Support(Uuid.random())
+                    this.bot.sendMessage(chatId, "You started chat with support team, all your messages will be automatically send to the moderator!")
                 }
 
-                command("support") {
-                    val text = this.message.text ?: return@command
-                    val chatId = ChatId.fromId(this.message.chat.id)
+                var buttons: InlineKeyboardMarkup? = null
 
-                    if (config.getStringList("support_users").contains(this.message.chat.username)) {
-                        chatsWithSupport[chatId] = Support(Uuid.random())
-                        this.bot.sendMessage(chatId, "You started chat with support team, all your messages will be automatically send to the moderator!")
-                    }
+                var addedButtons = 0
+                chatsWithSupport.forEach { (chatId, support) ->
+                    var backButton: InlineKeyboardMarkup?
+                    var nextButton: InlineKeyboardMarkup?
 
-                    var buttons: InlineKeyboardMarkup? = null
 
-                    var addedButtons = 0
-                    chatsWithSupport.forEach { (chatId, support) ->
-                        if (addedButtons >= 7) return@forEach
+                    if (addedButtons >= 7) return@forEach
 
-                        val whoStarted = this.bot.getChat(chatId).get()
-                        buttons = InlineKeyboardMarkup.create(
+                    val whoStarted = this.bot.getChat(chatId).get()
+                    buttons = InlineKeyboardMarkup.create(
 
                         listOf(InlineKeyboardButton.CallbackData(
                             "${whoStarted.firstName} | (${support.messages.size})",
                             "starting_chat"
                         )),
 
-//                        listOf(InlineKeyboardButton.CallbackData(
-//                            "Back"
-//
-//                        ))
+                        listOf(InlineKeyboardButton.CallbackData(
+                            "Back",
+                            "back_button"
+                        ),
+                            InlineKeyboardButton.CallbackData(
+                                "Next",
+                                "next_button"
+                            )
                         )
+                    )
 
-                        addedButtons++
-                    }
-
-                    this.bot.sendMessage(chatId, "Select the user who you want to response:", replyMarkup = buttons)
+                    addedButtons++
                 }
 
-                callbackQuery("starting_chat") {
-                    val supportChatId = ChatId.fromId(this.callbackQuery.message?.chat?.id ?: return@callbackQuery)
-                    val user = chatsWithSupport.entries.find { it.value.whoResponse == supportChatId } ?: return@callbackQuery
+                this.bot.sendMessage(chatId, "Select the user who you want to response:", replyMarkup = buttons)
+            }
 
-                    val messages = user.value.messages
-                    val chatId = user.value.whoResponse ?: return@callbackQuery
+            callbackQuery("starting_chat") {
+                val supportChatId = ChatId.fromId(this.callbackQuery.message?.chat?.id ?: return@callbackQuery)
+                val user = chatsWithSupport.entries.find { it.value.whoResponse == supportChatId } ?: return@callbackQuery
 
-                    if (!messages.isEmpty()) {
-                        messages.forEach { this.bot.sendMessage(supportChatId, it) }
-                    }
+                val messages = user.value.messages
+                val chatId = user.value.whoResponse ?: return@callbackQuery
 
-                    this.bot.sendMessage(chatId, this.callbackQuery.message?.text ?: return@callbackQuery)
+                if (!messages.isEmpty()) {
+                    messages.forEach { this.bot.sendMessage(supportChatId, it) }
                 }
+
+                this.bot.sendMessage(chatId, this.callbackQuery.message?.text ?: return@callbackQuery)
             }
         }
-
-        bot.startPolling()
     }
 
-    override fun onDisable() {
-    }
+    bot.startPolling()
 }

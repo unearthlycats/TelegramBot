@@ -1,3 +1,5 @@
+token: "your_token"
+
 owners:
   # your telegram username here
   #  You can save it if you need it, but I don't use this anywhere
