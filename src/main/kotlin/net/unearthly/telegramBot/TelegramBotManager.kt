@@ -52,6 +52,13 @@ fun main() {
                     onCommand(this.message)
                 }
 
+                val user = chatsWithSupport.entries.find { it.value.whoResponse == chatId }
+
+                if (user != null) {
+                    bot.sendMessage(user.key, this.message.text ?: return@message)
+                    return@message
+                }
+
                 if (chatsWithSupport.containsKey(chatId)) {
                     val user = chatsWithSupport[chatId] ?: return@message
 
@@ -110,15 +117,12 @@ fun main() {
             callbackQuery("starting_chat") {
                 val supportChatId = ChatId.fromId(this.callbackQuery.message?.chat?.id ?: return@callbackQuery)
                 val user = chatsWithSupport.entries.find { it.value.whoResponse == supportChatId } ?: return@callbackQuery
-
                 val messages = user.value.messages
-                val chatId = user.value.whoResponse ?: return@callbackQuery
 
-                if (!messages.isEmpty()) {
+
+                if (!messages.isNotEmpty()) {
                     messages.forEach { this.bot.sendMessage(supportChatId, it) }
                 }
-
-                this.bot.sendMessage(chatId, this.callbackQuery.message?.text ?: return@callbackQuery)
             }
         }
     }
