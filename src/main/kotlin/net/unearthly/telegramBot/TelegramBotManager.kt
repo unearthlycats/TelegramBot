@@ -79,37 +79,7 @@ fun main() {
                     this.bot.sendMessage(chatId, "You started chat with support team, all your messages will be automatically send to the moderator!")
                 }
 
-                var buttons: InlineKeyboardMarkup? = null
-
-                var addedButtons = 0
-                chatsWithSupport.forEach { (chatId, support) ->
-                    var backButton: InlineKeyboardMarkup?
-                    var nextButton: InlineKeyboardMarkup?
-
-
-                    if (addedButtons >= 7) return@forEach
-
-                    val whoStarted = this.bot.getChat(chatId).get()
-                    buttons = InlineKeyboardMarkup.create(
-
-                        listOf(InlineKeyboardButton.CallbackData(
-                            "${whoStarted.firstName} | (${support.messages.size})",
-                            "starting_chat"
-                        )),
-
-                        listOf(InlineKeyboardButton.CallbackData(
-                            "Back",
-                            "back_button"
-                        ),
-                            InlineKeyboardButton.CallbackData(
-                                "Next",
-                                "next_button"
-                            )
-                        )
-                    )
-
-                    addedButtons++
-                }
+                val buttons = getWhoNeedSupport(0)
 
                 this.bot.sendMessage(chatId, "Select the user who you want to response:", replyMarkup = buttons)
             }
@@ -119,13 +89,45 @@ fun main() {
                 val user = chatsWithSupport.entries.find { it.value.whoResponse == supportChatId } ?: return@callbackQuery
                 val messages = user.value.messages
 
-
                 if (!messages.isNotEmpty()) {
                     messages.forEach { this.bot.sendMessage(supportChatId, it) }
                 }
+            }
+
+            callbackQuery("back_button") {
+                val supportChatId = ChatId.fromId(this.callbackQuery.message?.chat?.id ?: return@callbackQuery)
+
+//                this.bot.editMessageText(supportChatId, this.callbackQuery.message?.messageId ?: return@callbackQuery, text =)
             }
         }
     }
 
     bot.startPolling()
+}
+
+fun getWhoNeedSupport(page: Int) : InlineKeyboardMarkup {
+    val buttonsPerPages = 8
+    val activeTickets = chatsWithSupport.entries.toList()
+
+    val totalPages = (if (activeTickets.isEmpty()) 1 else (activeTickets.size + buttonsPerPages - 1) / buttonsPerPages) - 1
+    val start = page * buttonsPerPages
+    val end = minOf(start + buttonsPerPages, activeTickets.size)
+
+    val inlineButtons = mutableListOf<List<InlineKeyboardButton>>()
+
+    for (i in start until end) {
+        val (chatId, support) = activeTickets[i]
+
+        inlineButtons.add(listOf(InlineKeyboardButton.CallbackData("${bot.getChat(chatId).get().username}", "starting_chat")))
+    }
+
+    if (page > 0) {
+        inlineButtons.add(listOf(InlineKeyboardButton.CallbackData("Back", "back_button")))
+    }
+
+    if (page > totalPages) {
+        inlineButtons.add(listOf(InlineKeyboardButton.CallbackData("Next", "next_button")))
+    }
+
+    return InlineKeyboardMarkup.create(inlineButtons)
 }
