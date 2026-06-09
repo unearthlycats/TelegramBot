@@ -94,10 +94,23 @@ fun main() {
                 }
             }
 
-            callbackQuery("back_button") {
+            callbackQuery {
                 val supportChatId = ChatId.fromId(this.callbackQuery.message?.chat?.id ?: return@callbackQuery)
 
-//                this.bot.editMessageText(supportChatId, this.callbackQuery.message?.messageId ?: return@callbackQuery, text =)
+                if (this.callbackQuery.data.startsWith("page:")) {
+                    val page = this.callbackQuery.data.substringAfter("page:").toIntOrNull() ?: 0
+                    val whoNeedSupport = getWhoNeedSupport(page)
+
+                    this.bot.editMessageText(
+                        supportChatId,
+                        this.callbackQuery.message?.messageId ?: return@callbackQuery,
+                        text = this.callbackQuery.message?.text ?: return@callbackQuery,
+                        replyMarkup = whoNeedSupport
+                    )
+
+                    this.bot.answerCallbackQuery(this.callbackQuery.id)
+                }
+
             }
         }
     }
@@ -116,17 +129,17 @@ fun getWhoNeedSupport(page: Int) : InlineKeyboardMarkup {
     val inlineButtons = mutableListOf<List<InlineKeyboardButton>>()
 
     for (i in start until end) {
-        val (chatId, support) = activeTickets[i]
+        val (chatId, _) = activeTickets[i]
 
         inlineButtons.add(listOf(InlineKeyboardButton.CallbackData("${bot.getChat(chatId).get().username}", "starting_chat")))
     }
 
     if (page > 0) {
-        inlineButtons.add(listOf(InlineKeyboardButton.CallbackData("Back", "back_button")))
+        inlineButtons.add(listOf(InlineKeyboardButton.CallbackData("Back", "page:${page-1}")))
     }
 
     if (page > totalPages) {
-        inlineButtons.add(listOf(InlineKeyboardButton.CallbackData("Next", "next_button")))
+        inlineButtons.add(listOf(InlineKeyboardButton.CallbackData("Next", "page:${page+1}")))
     }
 
     return InlineKeyboardMarkup.create(inlineButtons)

@@ -12,6 +12,7 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.11.0")
     implementation("com.charleskorn.kaml:kaml:0.104.0")
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
 }
 
 kotlin {
