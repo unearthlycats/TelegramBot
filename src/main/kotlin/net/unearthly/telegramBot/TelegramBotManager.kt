@@ -9,13 +9,16 @@ import com.github.kotlintelegrambot.dispatcher.command
 import com.github.kotlintelegrambot.dispatcher.message
 import com.github.kotlintelegrambot.entities.ChatId
 import com.github.kotlintelegrambot.entities.InlineKeyboardMarkup
+import com.github.kotlintelegrambot.entities.KeyboardReplyMarkup
 import com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton
+import com.github.kotlintelegrambot.entities.keyboard.KeyboardButton
 import java.io.File
 import net.unearthly.telegramBot.command.onCommand
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.uuid.Uuid
 import kotlinx.serialization.decodeFromString
+import kotlin.Boolean
 
 //IDK is there comfortable to place the variable
 private val chatsWithSupport = mutableMapOf<ChatId.Id, Support>()
@@ -75,8 +78,12 @@ fun main() {
                 val chatId = ChatId.fromId(this.message.chat.id)
 
                 if (config.moderators.contains(this.message.chat.username)) {
+                    val buttons = InlineKeyboardMarkup.create(
+                        listOf(InlineKeyboardButton.CallbackData("Close ticket", "close_ticket")),
+                    )
+
                     chatsWithSupport[chatId] = Support(Uuid.random())
-                    this.bot.sendMessage(chatId, "You started chat with support team, all your messages will be automatically send to the moderator!")
+                    this.bot.sendMessage(chatId, "You started chat with support team, all your messages will be automatically send to the moderator!", replyMarkup = buttons)
                 }
 
                 val buttons = getWhoNeedSupport(0)
